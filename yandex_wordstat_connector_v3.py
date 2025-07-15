@@ -1,4 +1,5 @@
 import requests
+from dotenv import dotenv_values
 from typing import Optional, List, Dict, Any
 import time
 
@@ -6,6 +7,7 @@ import time
 VALID_PERIODS = {"monthly", "weekly", "daily"}
 VALID_DEVICES = {"all", "desktop", "phone", "tablet"}
 MAX_REQUESTS_PER_RUN = 100
+
 
 # класс подключения к wordstat
 class YandexWordstatConnector:
@@ -15,7 +17,7 @@ class YandexWordstatConnector:
         self.token = token
         self.headers = {
             "Content-Type": "application/json;charset=utf-8",
-            "Authorization": f"Bearer {self.token}"
+            "Authorization": f"Bearer {self.token}",
         }
         self.valid_regions = self.get_valid_regions()
 
@@ -25,15 +27,19 @@ class YandexWordstatConnector:
         response = requests.post(url, headers=self.headers, json={})
         if response.status_code == 200:
             regions_data = response.json()
-            print("getRegionsTree:", regions_data) # отладочный вывод
+            print("getRegionsTree:", regions_data)  # отладочный вывод
             ids = []
             for root in regions_data:
                 ids.extend(self.extract_region_ids(root))
-            print("получены ID регионов:", ids[:20], "...")  # смотрю, что там лежит по первым 20ти
+            print(
+                "получены ID регионов:", ids[:20], "..."
+            )  # смотрю, что там лежит по первым 20ти
             return ids
         else:
-            raise Exception(f"ошибка получения регионов: {response.status_code} {response.text}")
-    
+            raise Exception(
+                f"ошибка получения регионов: {response.status_code} {response.text}"
+            )
+
     # извлечение id всех доступных регионов
     def extract_region_ids(self, data: Dict[str, Any]) -> List[int]:
         ids = []
@@ -65,7 +71,7 @@ class YandexWordstatConnector:
         self,
         phrase: str,
         regions: Optional[List[int]] = None,
-        devices: Optional[List[str]] = None
+        devices: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         url = f"{self.BASE_URL}/v1/topRequests"
         payload = {"phrase": phrase}
@@ -78,7 +84,9 @@ class YandexWordstatConnector:
         if response.status_code == 200:
             return response.json()
         else:
-            raise Exception(f"ошибка при получении топов: {response.status_code} {response.text}")
+            raise Exception(
+                f"ошибка при получении топов: {response.status_code} {response.text}"
+            )
 
     # получение запросов dynamics
     def get_dynamics(
@@ -88,14 +96,10 @@ class YandexWordstatConnector:
         from_date: str,
         to_date: Optional[str] = None,
         regions: Optional[List[int]] = None,
-        devices: Optional[List[str]] = None
+        devices: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         url = f"{self.BASE_URL}/v1/dynamics"
-        payload = {
-            "phrase": phrase,
-            "period": period,
-            "fromDate": from_date
-        }
+        payload = {"phrase": phrase, "period": period, "fromDate": from_date}
         if to_date:
             payload["toDate"] = to_date
         if regions:
@@ -107,8 +111,10 @@ class YandexWordstatConnector:
         if response.status_code == 200:
             return response.json()
         else:
-            raise Exception(f"ошибка при получении динамики: {response.status_code} {response.text}")
-    
+            raise Exception(
+                f"ошибка при получении динамики: {response.status_code} {response.text}"
+            )
+
     # загрузка динамики по фразам
     def get_dynamics_batch(
         self,
@@ -118,7 +124,7 @@ class YandexWordstatConnector:
         to_date: Optional[str] = None,
         regions: Optional[List[int]] = None,
         devices: Optional[List[str]] = None,
-        pause_seconds: float = 1.0
+        pause_seconds: float = 1.0,
     ) -> Dict[str, Dict[str, Any]]:
         if len(phrases) > MAX_REQUESTS_PER_RUN:
             raise ValueError(f"слишком много фраз — максимум {MAX_REQUESTS_PER_RUN}!")
@@ -136,7 +142,7 @@ class YandexWordstatConnector:
                     from_date=from_date,
                     to_date=to_date,
                     regions=regions,
-                    devices=devices
+                    devices=devices,
                 )
                 results[phrase] = data
                 success_count += 1
@@ -146,7 +152,9 @@ class YandexWordstatConnector:
                 error_count += 1
             time.sleep(pause_seconds)
 
-        print(f"\n запросы завершены: успешно — {success_count}, с ошибками — {error_count}")
+        print(
+            f"\n запросы завершены: успешно — {success_count}, с ошибками — {error_count}"
+        )
         return results
 
     # универсальная валидация параметров
@@ -154,7 +162,7 @@ class YandexWordstatConnector:
         self,
         period: Optional[str] = None,
         regions: Optional[List[int]] = None,
-        devices: Optional[List[str]] = None
+        devices: Optional[List[str]] = None,
     ) -> None:
         if period and not self.validate_period(period):
             raise ValueError(f"неверный период: {period}")
@@ -165,9 +173,7 @@ class YandexWordstatConnector:
 
     # универсальный запуск любых запросов (топ или динамика)
     def run_batch_requests(
-        self,
-        batch: List[Dict[str, Any]],
-        pause_seconds: float = 1.0
+        self, batch: List[Dict[str, Any]], pause_seconds: float = 1.0
     ) -> List[Dict[str, Any]]:
         results = []
 
@@ -182,20 +188,22 @@ class YandexWordstatConnector:
                 self.validate_inputs(
                     period=payload.get("period"),
                     regions=payload.get("regions"),
-                    devices=payload.get("devices")
+                    devices=payload.get("devices"),
                 )
 
                 if method == "dynamics":
                     required = ["phrase", "period", "from_date"]
                     if not all(key in payload for key in required):
-                        raise ValueError(f"отсутствуют обязательные параметры: {required}")
+                        raise ValueError(
+                            f"отсутствуют обязательные параметры: {required}"
+                        )
                     result = self.get_dynamics(
                         phrase=payload["phrase"],
                         period=payload["period"],
                         from_date=payload["from_date"],
                         to_date=payload.get("to_date"),
                         regions=payload.get("regions"),
-                        devices=payload.get("devices")
+                        devices=payload.get("devices"),
                     )
 
                 elif method == "topRequests":
@@ -204,7 +212,7 @@ class YandexWordstatConnector:
                     result = self.get_top_requests(
                         phrase=payload["phrase"],
                         regions=payload.get("regions"),
-                        devices=payload.get("devices")
+                        devices=payload.get("devices"),
                     )
 
                 else:
@@ -219,3 +227,64 @@ class YandexWordstatConnector:
             time.sleep(pause_seconds)
 
         return results
+
+
+if __name__ == "__main__":
+    config = dotenv_values(".env")
+    TOKEN = config["YANDEX_WORDSTAT_TOKEN"]
+
+    client = YandexWordstatConnector(token=TOKEN)
+
+    batch = [
+        {
+            "method": "dynamics",
+            "payload": {
+                "phrase": "купить ноутбук",
+                "period": "weekly",
+                "from_date": "2024-02-05",
+                "to_date": "2024-04-07",
+                "regions": [213],
+                "devices": ["all"],
+            },
+        },
+        {
+            "method": "topRequests",
+            "payload": {"phrase": "котики", "regions": [2], "devices": ["desktop"]},
+        },
+        {
+            "method": "topRequests",
+            "payload": {
+                "phrase": "!приют для (собак|кошек)",
+                "regions": [213],
+                "devices": ["phone"],
+            },
+        },
+        {
+            "method": "dynamics",
+            "payload": {
+                "phrase": "заказать пиццу",
+                "period": "monthly",
+                "from_date": "2024-05-01",
+                "to_date": "2024-12-31",
+                "regions": [213],
+                "devices": ["all"],
+            },
+        },
+        {
+            "method": "dynamics",
+            "payload": {
+                "phrase": "заказать пиццу",
+                "period": "daily",
+                "from_date": "2025-05-30",
+                "regions": [4],
+                "devices": ["all"],
+            },
+        },
+    ]
+
+    results = client.run_batch_requests(batch)
+
+    for i, result in enumerate(results):
+        print(f"\nРезультат запроса #{i + 1}:\n", result)
+
+    pass
