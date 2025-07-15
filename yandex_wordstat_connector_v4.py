@@ -60,6 +60,10 @@ class YandexWordstatConnector:
     ) -> Dict[str, Any]:
         pass
 
+    def phrases_to_list(self, phrases_str: str) -> List[str]:
+        # преобразует строку слов, разделенных запятой или переходом на новую строку в список фраз, который потом можно передать в get_dynamics_batch
+        pass
+
 
 if __name__ == "__main__":
     config = dotenv_values(".env")
